@@ -1,0 +1,30 @@
+name: Deploy Docker Node.js App to AWS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+
+    - name: Deploy Docker Container to AWS EC2 via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@16.178.134.41 << 'EOF'
+          cd ~/sabzicart-node-app
+          git pull origin main
+          docker build -t node-app:latest .
+          docker stop node-app-container || true
+          docker rm node-app-container || true
+          docker run -d --name node-app-container --restart always -p 3000:3000 node-app:latest
+          docker system prune -f
+        EOF
